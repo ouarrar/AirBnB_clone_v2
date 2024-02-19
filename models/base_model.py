@@ -18,7 +18,8 @@ class BaseModel:
     id = Column(String(60), unique=True, nullable=False, primary_key=True)
     created_at = Column(DateTime, nullable=False, default=(datetime.utcnow()))
     updated_at = Column(DateTime, nullable=False, default=(datetime.utcnow()))
-#    __table_args__ = {'mysql_collate': 'utf8mb4_0900_ai_ci'}
+    __table_args__ = {'mysql_charset': 'latin1'}
+
 
     def __init__(self, *args, **kwargs):
         """Instantiation of base model class
