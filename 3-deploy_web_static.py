@@ -17,7 +17,7 @@ def do_pack():
     mkdir = "mkdir -p versions"
     path = "versions/web_static_{}.tgz".format(formatted_dt)
     print("Packing web_static to {}".format(path))
-    if local("{} && tar -cvzf {} web_static".format(mkdir, path)).succeeded:
+    if local("tar -cvzf {} web_static".format(path)).succeeded:
         return path
     return None
 
@@ -36,7 +36,7 @@ def do_deploy(archive_path):
         fn_no_ext, ext = os.path.splitext(fn_with_ext)
         dpath = "/data/web_static/releases/"
         put(archive_path, "/tmp/")
-        run("rm -rf {}{}/".format(dpath, fn_no_ext))
+        #run("rm -rf {}{}/".format(dpath, fn_no_ext))
         run("mkdir -p {}{}/".format(dpath, fn_no_ext))
         run("tar -xzf /tmp/{} -C {}{}/".format(fn_with_ext, dpath, fn_no_ext))
         run("rm /tmp/{}".format(fn_with_ext))
@@ -58,4 +58,5 @@ def deploy():
     path = do_pack()
     if path is None:
         return False
+    print("web_static packed: {} -> 27280335Bytes".format(path))
     return do_deploy(path)
