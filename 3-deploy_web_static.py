@@ -1,78 +1,80 @@
 #!/usr/bin/python3
-"""
-Deploys archive to remote server.
-"""
-from fabric.api import put, run, env, local
+# Fabfile to create and distribute an archive to a web server.
+import os.path
 from datetime import datetime
-import os
+from fabric.api import env
+from fabric.api import local
+from fabric.api import put
+from fabric.api import run
 
 env.hosts = ["100.25.30.67", "100.25.177.64"]
 
 
 def do_pack():
-    """
-    genrates archive from web_static directory.
-    """
-
-    dir_name = 'web_static'
-    if not os.path.exists(dir_name):
+    """Create a tar gzipped archive of the directory web_static."""
+    dt = datetime.utcnow()
+    file = "versions/web_static_{}{}{}{}{}{}.tgz".format(dt.year,
+                                                         dt.month,
+                                                         dt.day,
+                                                         dt.hour,
+                                                         dt.minute,
+                                                         dt.second)
+    if os.path.isdir("versions") is False:
+        if local("mkdir -p versions").failed is True:
+            return None
+    if local("tar -cvzf {} web_static".format(file)).failed is True:
         return None
-    date = datetime.now()
-    date_string = date.strftime('%Y%m%d%H%M%S')
-    dir_name = dir_name + date_string
-    if not os.path.exists('versions'):
-        local('mkdir versions', capture=False)
-    archive_path = 'versions/{}.tgz'.format(dir_name)
-    local('tar -cvzf {} web_static'.format(archive_path), capture=False)
-
-    return os.path.abspath(archive_path)
+    return file
 
 
 def do_deploy(archive_path):
+    """Distributes an archive to a web server.
+
+    Args:
+        archive_path (str): The path of the archive to distribute.
+    Returns:
+        If the file doesn't exist at archive_path or an error occurs - False.
+        Otherwise - True.
     """
-    deploy function
-
-    archive_path: path to the archive on the local machine
-    return: True if operations worked correctly
-            False if operations failed or archive_path does not exist
-    """
-
-    if not os.path.exists(archive_path):
+    if os.path.isfile(archive_path) is False:
         return False
+    file = archive_path.split("/")[-1]
+    name = file.split(".")[0]
 
-    try:
-        # Upload the archive to the /tmp/ directory on the remote server
-        put(local_path=archive_path, remote_path='/tmp/')
-
-        # Decompresses Archive
-        new_release = archive_path.split('/')[-1].replace('.tgz', '')
-        run('mkdir -p /data/web_static/releases/{}'.format(new_release))
-        run('tar -xf /tmp/{} -C /data/web_static/releases/{}'
-            .format(archive_path.split('/')[-1], new_release))
-        run('rm /tmp/{}'.format(archive_path.split('/')[-1]))
-
-        # Updates Symbolic link
-        run('rm /data/web_static/current')
-        run('ln -s /data/web_static/releases/{} /data/web_static/current'
-            .format(new_release))
-        run('mv /data/web_static/releases/{}/web_static/* '
-            .format(new_release) + '/data/web_static/current')
-        run('echo "Holberton School" > /data/web_static/current/my_index.html')
-        run('rm -rf /data/web_static/releases/{}/web_static'
-            .format(new_release))
-        print('New version deployed!')
-        return True
-    except Exception as e:
-        print(f"Error: {e}")
+    if put(archive_path, "/tmp/{}".format(file)).failed is True:
         return False
+    if run("rm -rf /data/web_static/releases/{}/".
+           format(name)).failed is True:
+        return False
+    if run("mkdir -p /data/web_static/releases/{}/".
+           format(name)).failed is True:
+        return False
+    if run("tar -xzf /tmp/{} -C /data/web_static/releases/{}/".
+           format(file, name)).failed is True:
+        return False
+    if run("rm /tmp/{}".format(file)).failed is True:
+        return False
+    if run("mv /data/web_static/releases/{}/web_static/* "
+           "/data/web_static/releases/{}/".format(name, name)).failed is True:
+        return False
+    if run("rm -rf /data/web_static/releases/{}/web_static".
+           format(name)).failed is True:
+        return False
+    if run("rm -rf /data/web_static/current").failed is True:
+        return False
+    if run('echo "Holberton School" > /data/web_static/releases/{}/my_index.html'.
+           format(name)).failed is True:
+        return False
+    if run("ln -s /data/web_static/releases/{}/ /data/web_static/current".
+           format(name)).failed is True:
+        return False
+    print('New version deployed!')
+    return True
 
 
 def deploy():
-    """ Full deployment function """
-
-    archive = do_pack()
-
-    if archive:
-        return do_deploy(archive)
-    else:
+    """Create and distribute an archive to a web server."""
+    file = do_pack()
+    if file is None:
         return False
+    return do_deploy(file)
