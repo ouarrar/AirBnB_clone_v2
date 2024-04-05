@@ -9,6 +9,7 @@ from fabric.api import run
 
 env.hosts = ["100.25.30.67", "100.25.177.64"]
 
+# Fabfile to generates a .tgz archive from the contents of web_static.
 def do_pack():
     """Create a tar gzipped archive of the directory web_static."""
     dt = datetime.utcnow()
@@ -25,6 +26,7 @@ def do_pack():
         return None
     return file
 
+# Fabfile to distribute an archive to a web server.
 def do_deploy(archive_path):
     """Distributes an archive to a web server.
 
